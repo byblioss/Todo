@@ -1,37 +1,56 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 type Todo = {
-  id: number
-  text: string
-  done: boolean
+  Id: number
+  Text: string
+  Done: boolean
 }
 
 const newTodo = ref('')
 const todos = ref<Todo[]>([])
 
-function addTodo() {
+async function loadTodos() {
+  const response = await fetch('http://localhost:3000/todos')
+  todos.value = await response.json()
+}
+
+async function addTodo() {
   if (!newTodo.value.trim()) return
 
-  todos.value.push({
-    id: Date.now(),
-    text: newTodo.value,
-    done: false,
+  await fetch('http://localhost:3000/todos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text: newTodo.value,
+    }),
   })
 
   newTodo.value = ''
+  await loadTodos()
 }
 
-function toggleTodo(id: number) {
-  const todo = todos.value.find((t) => t.id === id)
-  if (todo) {
-    todo.done = !todo.done
-  }
+async function toggleTodo(id: number) {
+  await fetch(`http://localhost:3000/todos/${id}`, {
+    method: 'PATCH',
+  })
+
+  await loadTodos()
 }
 
-function deleteTodo(id: number) {
-  todos.value = todos.value.filter((t) => t.id !== id)
+async function deleteTodo(id: number) {
+  await fetch(`http://localhost:3000/todos/${id}`, {
+    method: 'DELETE',
+  })
+
+  await loadTodos()
 }
+
+onMounted(() => {
+  loadTodos()
+})
 </script>
 
 <template>
@@ -49,17 +68,17 @@ function deleteTodo(id: number) {
     </div>
 
     <ul class="todo-list">
-      <li v-for="todo in todos" :key="todo.id" class="todo-item">
+      <li v-for="todo in todos" :key="todo.Id" class="todo-item">
         <label class="todo-label">
           <input
             type="checkbox"
-            :checked="todo.done"
-            @change="toggleTodo(todo.id)"
+            :checked="todo.Done"
+            @change="toggleTodo(todo.Id)"
           />
-          <span :class="{ done: todo.done }">{{ todo.text }}</span>
+          <span :class="{ done: todo.Done }">{{ todo.Text }}</span>
         </label>
 
-        <button class="delete-btn" @click="deleteTodo(todo.id)">
+        <button class="delete-btn" @click="deleteTodo(todo.Id)">
           Löschen
         </button>
       </li>
